@@ -1,19 +1,77 @@
-name: Terraform Deploy
+# # 
+# name: Terraform Deploy
+
+# on:
+#   push:
+#     branches: [main]
+#   workflow_dispatch: {}
+
+# permissions:
+#   contents: read
+
+# env:
+#   AWS_REGION: ap-south-1 # match provider.tf
+
+# jobs:
+#   terraform:
+#     name: Terraform Plan & Apply
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Configure AWS Credentials
+#         uses: aws-actions/configure-aws-credentials@v6
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ env.AWS_REGION }}
+
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v4
+#         with:
+#           terraform_wrapper: false
+
+#       - name: Terraform Format Check
+#         run: terraform fmt -check
+
+#       - name: Terraform Init
+#         run: terraform init -input=false
+
+#       - name: Terraform Validate
+#         run: terraform validate
+
+#       - name: Terraform Plan
+#         run: terraform plan -input=false -out=tfplan
+
+#       - name: Terraform Apply
+#         run: terraform apply -input=false -auto-approve tfplan
+name: Terraform Deploy or Destroy
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Terraform operation
+        required: true
+        type: choice
+        options:
+          - deploy
+          - destroy
+        default: deploy
 
 permissions:
   contents: read
 
 env:
-  AWS_REGION: ap-south-1 # match provider.tf
+  AWS_REGION: ap-south-1
 
 jobs:
   terraform:
-    name: Terraform Plan & Apply
+    name: Terraform ${{ inputs.operation || 'deploy' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +100,13 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
+        if: github.event_name == 'push' || inputs.operation == 'deploy'
         run: terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
+        if: github.event_name == 'push' || inputs.operation == 'deploy'
         run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Terraform Destroy
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'destroy'
+        run: terraform destroy -input=false -auto-approve
