@@ -61,7 +61,7 @@ on:
         options:
           - deploy
           - destroy
-        default: deploy
+        
 
 permissions:
   contents: read
